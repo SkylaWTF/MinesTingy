@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Styled Mines Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1d;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        #game {
+            display: grid;
+            grid-template-columns: repeat(5, 100px);
+            grid-template-rows: repeat(5, 100px);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tile {
+            width: 100px;
+            height: 100px;
+            background-color: #26262b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            cursor: pointer;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .mine {
+            background-color: #f14668;
+            color: white;
+        }
+        .safe {
+            background-color: #33d17a;
+            color: white;
+        }
+        .hidden {
+            background-color: #26262b;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #controls input, #controls button, #controls select {
+            background-color: #1f1f22;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        #controls button {
+            background-color: #33d17a;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        #controls button:hover {
+            background-color: #2ab56d;
+        }
+        #controls input {
+            width: 200px;
+        }
+        #stats {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #money {
+            font-size: 24px;
+            color: #33d17a;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Mines Game</h1>
+
+<div id="game"></div>
+
+<div id="controls">
+    <div>
+        <label for="mines">Number of Mines:</label>
+        <select id="mines">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select>
+    </div>
+
+    <div>
+        <label for="bet">Bet Amount:</label>
+        <input type="number" id="bet" min="1" value="10">
+    </div>
+    
+    <div>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="cashOut()">Cash Out</button>
+    </div>
+</div>
+
+<div id="stats">
+    <p id="money">Money: $100</p>
+    <p id="status"></p>
+</div>
+
+<script>
+    let mineCount;
+    let minePositions = [];
+    let revealedTiles = [];
+    let gameOver = false;
+    let playerMoney = 100;
+    let betAmount;
+    let currentEarnings = 0;
+    let totalSafeTiles;
+    let earningsPerSafeTile;
+    const multiplier = 2.0;
+
+    function updateStats() {
+        document.getElementById('money').textContent = `Money: $${playerMoney}`;
+    }
+
+    function startGame() {
+        const gameBoard = document.getElementById('game');
+        const status = document.getElementById('status');
+        gameBoard.innerHTML = '';
+        mineCount = parseInt(document.getElementById('mines').value);
+        betAmount = parseInt(document.getElementById('bet').value);
+        minePositions = [];
+        revealedTiles = [];
+        gameOver = false;
+        currentEarnings = 0;
+
+        totalSafeTiles = 25 - mineCount;
+        earningsPerSafeTile = (betAmount * (1 + (mineCount / totalSafeTiles) * multiplier)).toFixed(2);
+
+        if (betAmount > playerMoney) {
+            status.textContent = 'Not enough money to place that bet!';
+            return;
+        }
+
+        playerMoney -= betAmount;
+        updateStats();
+
+        status.textContent = 'Good luck!';
+        
+        for (let i = 0; i < 25; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile hidden';
+            tile.id = i;
+            tile.onclick = () => revealTile(i);
+            gameBoard.appendChild(tile);
+        }
+
+        while (minePositions.length < mineCount) {
+            const randomPos = Math.floor(Math.random() * 25);
+            if (!minePositions.includes(randomPos)) {
+                minePositions.push(randomPos);
+            }
+        }
+    }
+
+    function revealTile(index) {
+        if (gameOver || revealedTiles.includes(index)) return;
+
+        const tile = document.getElementById(index);
+        revealedTiles.push(index);
+
+        if (minePositions.includes(index)) {
+            tile.className = 'tile mine';
+            tile.textContent = '💣';
+            gameOver = true;
+            document.getElementById('status').textContent = `You hit a mine! You lost $${betAmount}. Game Over.`;
+        } else {
+            tile.className = 'tile safe';
+            tile.textContent = '💎';
+            currentEarnings += parseFloat(earningsPerSafeTile);
+            document.getElementById('status').textContent = `Current Earnings: $${currentEarnings.toFixed(2)}`;
+
+            if (revealedTiles.length === totalSafeTiles) {
+                gameOver = true;
+                playerMoney += currentEarnings;
+                updateStats();
+                document.getElementById('status').textContent = `You won! You earned $${currentEarnings.toFixed(2)}.`;
+            }
+        }
+    }
+
+    function cashOut() {
+        if (!gameOver && revealedTiles.length > 0) {
+            playerMoney += currentEarnings;
+            updateStats();
+            document.getElementById('status').textContent = `You cashed out with $${currentEarnings.toFixed(2)}. Game Over.`;
+            gameOver = true;
+        }
+    }
+</script>
+
+</body>
+</html>
